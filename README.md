@@ -1,8 +1,8 @@
-# ForeScale — predictive autoscaling for Kubernetes
+# ForeScale: predictive autoscaling for Kubernetes
 
 > **Scale pods *before* the load arrives.** ForeScale is an ML-driven, predictive
 > autoscaler that keeps tail latency under SLA during traffic bursts where the
-> native, reactive HorizontalPodAutoscaler breaches it — and it does so with
+> native, reactive HorizontalPodAutoscaler breaches it, and it does so with
 > fewer pods.
 
 ![python](https://img.shields.io/badge/python-3.11-blue)
@@ -36,13 +36,13 @@ burst hits. p95 stays under the SLA.
    ForeScale:      forecasts burst 60s ahead → pods warm on arrival → SLA held
 ```
 
-## Demo: reactive vs. predictive — on a real Kubernetes cluster
+## Demo: reactive vs. predictive on a real Kubernetes cluster
 
 Same seeded traffic, two strategies, run **end-to-end on a single-node `kind`
 cluster** (`make demo`): real pods, real CPU work, scaled through Prometheus and
 the Kubernetes API. To make fast-booting demo pods behave like a real ML
 container, `inference-api` reports *not ready* for its first `STARTUP_DELAY_S`
-(45 s) — reproducing the cold-start penalty the whole thesis depends on.
+(45 s), reproducing the cold-start penalty the whole thesis depends on.
 
 ![comparison](results/comparison.png)
 
@@ -67,14 +67,14 @@ replicas): it provisions precisely for what's coming instead of over-reacting to
 what already happened. See [`results/results.md`](results/results.md).
 
 > The identical comparison also runs **without any cluster** via an offline
-> queueing simulator (`make demo-sim`, used in CI) — same story, reproducible
+> queueing simulator (`make demo-sim`, used in CI): same story, reproducible
 > anywhere in ~30 s.
 
 ### It scales on the *forecast*, not the current load
 
 Real controller logs from the run above. At `t=5s` the live load is barely
 non-zero, yet it has already provisioned 5 warm pods because it predicts ~176 rps
-arriving in 60 s — so they are hot when the burst lands:
+arriving in 60 s, so they are hot when the burst lands:
 
 ```
 [forescale-controller] starting: target=forescale/inference-api lead=60s capacity=50rps margin=30%
@@ -83,7 +83,7 @@ arriving in 60 s — so they are hot when the burst lands:
 ```
 
 The reactive HPA, by contrast, has nothing to react to at `t=5s` and is still at
-its 2-pod floor when the burst arrives — then it is a full cold-start behind.
+its 2-pod floor when the burst arrives, then it is a full cold-start behind.
 
 ## How it works
 
@@ -123,7 +123,7 @@ swapped in. On the synthetic workload it beats a naive persistence baseline by
 
 The synthetic traffic curve (base + day/night seasonality + scheduled bursts) is
 seeded and lives in one shared module, so the reactive and predictive runs replay
-the **identical** workload — the only way the comparison is fair:
+the **identical** workload, the only way the comparison is fair:
 
 ![traffic](results/traffic_preview.png)
 
@@ -140,7 +140,7 @@ the **identical** workload — the only way the comparison is fair:
 
 ## Quickstart
 
-### Zero-dependency path (no cluster) — generate the graph in ~30 s
+### Zero-dependency path (no cluster): generate the graph in ~30 s
 
 ```bash
 make venv        # create .venv, install deps
@@ -189,23 +189,23 @@ forescale/
 
 ## Engineering notes & pitfalls handled
 
-- **Real CPU work**, not `sleep`, in `/predict` — otherwise the CPU-based HPA
+- **Real CPU work**, not `sleep`, in `/predict`, otherwise the CPU-based HPA
   would never react (verified accurate to ~0.01 ms).
 - **One seeded traffic curve**, replayed identically (same `START_EPOCH`) for
-  both modes and for the controller's forecast clock — so the comparison is fair
+  both modes and for the controller's forecast clock, so the comparison is fair
   *and* the predictive pre-warming is correctly timed.
 - **Simulated cold-start** (`STARTUP_DELAY_S`) makes a tiny demo pod behave like a
   real ML container, which is what the whole argument hinges on.
-- **HPA and controller are mutually exclusive** — predictive mode deletes the HPA
+- **HPA and controller are mutually exclusive**: predictive mode deletes the HPA
   so two controllers never fight over the replica count.
 - **Non-root, gid 0, capability-dropped, read-only-rootfs** containers on a high
-  port — OpenShift-compatible.
+  port (OpenShift-compatible).
 
 ## Limitations (honest)
 
 - **Unpredictable spikes can't be anticipated.** ForeScale wins on *recurring* /
   *learnable* demand. For genuine surprises, keep it as the proactive layer **on
-  top of an HPA safety net** — exactly the `max(forecast, current)` + max-hold
+  top of an HPA safety net**, exactly the `max(forecast, current)` + max-hold
   pattern used here.
 - **Forecast quality is everything.** A bad model over- or under-provisions; the
   project ships an MAE check and a test asserting the model beats a naive baseline.
@@ -219,4 +219,4 @@ forescale/
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
