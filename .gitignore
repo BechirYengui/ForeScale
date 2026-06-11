@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Models
+*.pkl
+
+# Results: keep the committed showcase artifacts (comparison.png, results.md,
+# traffic_preview.png), ignore transient per-run latency logs.
+results/latency_*.csv
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

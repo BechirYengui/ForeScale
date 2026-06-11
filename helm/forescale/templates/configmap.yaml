@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: forescale-config
+  labels:
+    {{- include "forescale.labels" . | nindent 4 }}
+data:
+  WORK_MS: {{ .Values.config.workMs | quote }}
+  WORKERS: {{ .Values.config.workers | quote }}
+  CAPACITY_RPS: {{ .Values.config.capacityRps | quote }}
+  LEAD_TIME: {{ .Values.config.leadTime | quote }}
+  SAFETY_MARGIN: {{ .Values.config.safetyMargin | quote }}
+  MIN_REPLICAS: {{ .Values.config.minReplicas | quote }}
+  MAX_REPLICAS: {{ .Values.config.maxReplicas | quote }}
+  CONTROL_PERIOD: {{ .Values.config.controlPeriod | quote }}
+  DAY_SECONDS: {{ .Values.config.daySeconds | quote }}
+  SAMPLE_DT: {{ .Values.config.sampleDt | quote }}
+  N_LAGS: {{ .Values.config.nLags | quote }}
+  PROMETHEUS_URL: "http://prometheus:9090"

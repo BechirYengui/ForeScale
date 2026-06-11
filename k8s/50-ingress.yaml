@@ -1,0 +1,25 @@
+# NGINX ingress for inference-api. Optional: handy for poking /predict and
+# /metrics from the host. The demo's load-generator targets the Service directly,
+# so the ingress is not required for `make demo`.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: inference-api
+  namespace: forescale
+  labels:
+    app.kubernetes.io/part-of: forescale
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: inference.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: inference-api
+                port:
+                  number: 8080

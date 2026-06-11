@@ -1,0 +1,52 @@
+# ForeScale Helm values. Override with `helm install ... -f my-values.yaml` or
+# `--set key=value`.
+
+# Scaling mode:
+#   predictive: deploy the ForeScale controller, no HPA.
+#   reactive:   deploy the native HPA, no controller.
+# Never enable both at once -- two controllers fighting over replicas is a bug.
+mode: predictive          # predictive | reactive
+
+image:
+  repository: forescale
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# --- workload / control parameters (shared via a ConfigMap) ---
+config:
+  workMs: 40              # real CPU work per request (ms)
+  workers: 4              # inference slots per pod
+  capacityRps: 50         # sustainable rps per pod
+  leadTime: 60            # forecast horizon ~= pod cold-start (s)
+  safetyMargin: "0.30"    # head-room fraction
+  minReplicas: 2
+  maxReplicas: 20
+  controlPeriod: 10       # controller loop period (s)
+  daySeconds: 600         # compressed simulated day (s)
+  sampleDt: 2
+  nLags: 8
+
+inferenceApi:
+  replicas: 2
+  resources:
+    requests: { cpu: "250m", memory: "128Mi" }
+    limits: { cpu: "1000m", memory: "256Mi" }
+
+controller:
+  resources:
+    requests: { cpu: "100m", memory: "256Mi" }
+    limits: { cpu: "500m", memory: "512Mi" }
+
+# Reactive HPA target CPU utilisation (used only when mode=reactive).
+hpa:
+  targetCPUUtilization: 50
+
+# Observability sub-stack (Prometheus + Grafana). Disable to bring your own.
+observability:
+  enabled: true
+
+# Security context applied to all app pods (OpenShift-friendly).
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 0           # OpenShift convention: gid 0 owns the writable dirs

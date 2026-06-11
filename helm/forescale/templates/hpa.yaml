@@ -1,0 +1,24 @@
+{{- if eq .Values.mode "reactive" }}
+# Native HPA -- only rendered in reactive mode (mutually exclusive with the
+# predictive controller).
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: inference-api
+  labels:
+    {{- include "forescale.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: inference-api
+  minReplicas: {{ .Values.config.minReplicas }}
+  maxReplicas: {{ .Values.config.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.targetCPUUtilization }}
+{{- end }}

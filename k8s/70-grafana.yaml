@@ -1,0 +1,70 @@
+# Grafana with a provisioned datasource + dashboard.
+# The two ConfigMaps it mounts are created by `make up` from the files under
+# observability/grafana/ (single source of truth), e.g.:
+#   kubectl -n forescale create configmap grafana-provisioning \
+#     --from-file=observability/grafana/datasource.yaml \
+#     --from-file=observability/grafana/dashboards.yaml
+#   kubectl -n forescale create configmap grafana-dashboards \
+#     --from-file=observability/grafana/dashboard.json
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: forescale
+  labels: {app: grafana, app.kubernetes.io/part-of: forescale}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: grafana}
+  template:
+    metadata:
+      labels: {app: grafana}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 472            # grafana
+        fsGroup: 472
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.3.0
+          ports:
+            - containerPort: 3000
+          env:
+            - {name: GF_SECURITY_ADMIN_USER, value: "admin"}
+            - {name: GF_SECURITY_ADMIN_PASSWORD, value: "admin"}
+            - {name: GF_AUTH_ANONYMOUS_ENABLED, value: "true"}
+            - {name: GF_AUTH_ANONYMOUS_ORG_ROLE, value: "Viewer"}
+          resources:
+            requests: {cpu: "100m", memory: "128Mi"}
+            limits: {cpu: "500m", memory: "256Mi"}
+          volumeMounts:
+            - {name: datasources, mountPath: /etc/grafana/provisioning/datasources}
+            - {name: providers, mountPath: /etc/grafana/provisioning/dashboards}
+            - {name: dashboards, mountPath: /var/lib/grafana/dashboards}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+      volumes:
+        - name: datasources
+          configMap:
+            name: grafana-provisioning
+            items:
+              - {key: datasource.yaml, path: datasource.yaml}
+        - name: providers
+          configMap:
+            name: grafana-provisioning
+            items:
+              - {key: dashboards.yaml, path: dashboards.yaml}
+        - name: dashboards
+          configMap: {name: grafana-dashboards}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: forescale
+  labels: {app: grafana, app.kubernetes.io/part-of: forescale}
+spec:
+  selector: {app: grafana}
+  ports:
+    - {name: http, port: 3000, targetPort: 3000}

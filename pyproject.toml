@@ -1,0 +1,32 @@
+[project]
+name = "forescale"
+version = "0.1.0"
+description = "Predictive, ML-driven autoscaler for Kubernetes."
+requires-python = ">=3.10"
+
+# Dev/test dependencies (the services pin their own runtime deps in their
+# requirements.txt). Install with:  pip install -e ./libs && pip install -r requirements-dev.txt
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+extend-exclude = [".venv", "results"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, bugbear, comprehensions, pyupgrade, bandit-ish.
+select = ["E", "F", "I", "B", "C4", "UP", "S"]
+ignore = ["S101"]  # asserts are fine in tests.
+
+[tool.ruff.lint.isort]
+known-first-party = ["forescale_core", "forecaster", "experiments"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/*" = ["S"]
+# The k8s runner and controller intentionally shell out to kubectl and use broad
+# excepts to keep the control loop resilient.
+"experiments/k8s_runner.py" = ["S603", "S607"]
+"services/forescale-controller/app.py" = ["BLE001"]
+
+[tool.pytest.ini_options]
+testpaths = ["forecaster/tests", "experiments/tests"]
+addopts = "-q"
+pythonpath = [".", "libs", "experiments"]

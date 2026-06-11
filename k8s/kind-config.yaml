@@ -1,0 +1,14 @@
+# kind cluster for ForeScale. Single node is enough for the demo.
+# Port mappings expose the NGINX ingress controller on localhost:8081 (http).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      - { containerPort: 80, hostPort: 8081, protocol: TCP }

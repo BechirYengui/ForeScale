@@ -1,0 +1,10 @@
+# Prometheus config for the docker-compose dev stack (static targets, no k8s SD).
+global:
+  scrape_interval: 5s
+scrape_configs:
+  - job_name: inference-api
+    static_configs:
+      - targets: ["inference-api:8080"]
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

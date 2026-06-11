@@ -1,0 +1,40 @@
+# Least-privilege RBAC for the predictive controller: it only needs to read and
+# patch the inference-api Deployment and its scale subresource.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: forescale-controller
+  namespace: forescale
+  labels:
+    app.kubernetes.io/part-of: forescale
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: forescale-controller
+  namespace: forescale
+  labels:
+    app.kubernetes.io/part-of: forescale
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    verbs: ["get", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: forescale-controller
+  namespace: forescale
+  labels:
+    app.kubernetes.io/part-of: forescale
+subjects:
+  - kind: ServiceAccount
+    name: forescale-controller
+    namespace: forescale
+roleRef:
+  kind: Role
+  name: forescale-controller
+  apiGroup: rbac.authorization.k8s.io

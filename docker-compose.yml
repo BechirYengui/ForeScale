@@ -1,0 +1,66 @@
+# Fast local dev without Kubernetes.
+#
+#   docker compose up -d inference-api           # just the app
+#   docker compose --profile load up load-generator  # drive synthetic traffic
+#   docker compose --profile obs up -d prometheus grafana  # observability
+#
+# Note: predictive autoscaling is a Kubernetes feature, so the controller is not
+# part of this stack -- use `make up && make demo` for the full predictive demo.
+services:
+  inference-api:
+    build:
+      context: ./services/inference-api
+    image: forescale/inference-api:latest
+    environment:
+      WORK_MS: "40"
+      WORKERS: "4"
+      CAPACITY_RPS: "50"
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/healthz').status==200 else 1)"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  load-generator:
+    build:
+      context: .
+      dockerfile: services/load-generator/Dockerfile
+    image: forescale/load-generator:latest
+    profiles: ["load"]
+    depends_on:
+      inference-api:
+        condition: service_healthy
+    environment:
+      TARGET_URL: "http://inference-api:8080"
+      RUN_LABEL: "compose"
+      DAY_SECONDS: "300"
+      RESULTS_DIR: "/app/results"
+    volumes:
+      - ./results:/app/results
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    profiles: ["obs"]
+    depends_on: [inference-api]
+    volumes:
+      - ./observability/prometheus-compose.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    profiles: ["obs"]
+    depends_on: [prometheus]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_SECURITY_ADMIN_PASSWORD: "admin"
+    volumes:
+      - ./observability/grafana/datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml:ro
+      - ./observability/grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
+      - ./observability/grafana/dashboard.json:/var/lib/grafana/dashboards/dashboard.json:ro
+    ports:
+      - "3000:3000"

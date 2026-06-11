@@ -1,0 +1,11 @@
+# Grafana provisioning: load any dashboard JSON found in /var/lib/grafana/dashboards.
+apiVersion: 1
+providers:
+  - name: forescale
+    orgId: 1
+    folder: ForeScale
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference-api
+  namespace: forescale
+  labels:
+    app: inference-api
+    app.kubernetes.io/part-of: forescale
+spec:
+  # Starting point; both the HPA (reactive) and the controller (predictive)
+  # override this at runtime.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inference-api
+  template:
+    metadata:
+      labels:
+        app: inference-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      # OpenShift-friendly: run as an explicit non-root user, drop all privileges.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 0          # OpenShift convention: gid 0 owns the writable dirs
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: inference-api
+          image: forescale/inference-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: WORK_MS
+              valueFrom:
+                configMapKeyRef:
+                  name: forescale-config
+                  key: WORK_MS
+            - name: WORKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: forescale-config
+                  key: WORKERS
+            - name: CAPACITY_RPS
+              valueFrom:
+                configMapKeyRef:
+                  name: forescale-config
+                  key: CAPACITY_RPS
+            - name: STARTUP_DELAY_S
+              valueFrom:
+                configMapKeyRef:
+                  name: forescale-config
+                  key: STARTUP_DELAY_S
+          # Requests/limits are what the CPU-based HPA measures against.
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "128Mi"
+            limits:
+              cpu: "1000m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference-api
+  namespace: forescale
+  labels:
+    app: inference-api
+    app.kubernetes.io/part-of: forescale
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+spec:
+  selector:
+    app: inference-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

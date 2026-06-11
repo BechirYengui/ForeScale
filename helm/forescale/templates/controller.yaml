@@ -1,0 +1,81 @@
+{{- if eq .Values.mode "predictive" }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: forescale-controller
+  labels:
+    {{- include "forescale.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: forescale-controller
+  labels:
+    {{- include "forescale.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    verbs: ["get", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: forescale-controller
+  labels:
+    {{- include "forescale.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: forescale-controller
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: forescale-controller
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forescale-controller
+  labels:
+    app: forescale-controller
+    {{- include "forescale.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: forescale-controller
+  template:
+    metadata:
+      labels:
+        app: forescale-controller
+    spec:
+      serviceAccountName: forescale-controller
+      securityContext:
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: controller
+          image: {{ include "forescale.image" (list . "controller") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: forescale-config
+          env:
+            - name: NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: TARGET_DEPLOYMENT
+              value: inference-api
+          resources:
+            {{- toYaml .Values.controller.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+{{- end }}

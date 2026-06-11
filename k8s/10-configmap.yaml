@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: forescale-config
+  namespace: forescale
+  labels:
+    app.kubernetes.io/part-of: forescale
+data:
+  # --- workload shape ---
+  WORK_MS: "40"            # real CPU work per request (ms)
+  WORKERS: "4"            # inference slots per pod
+  CAPACITY_RPS: "50"      # sustainable rps per pod (agreed by all components)
+  STARTUP_DELAY_S: "45"   # simulated ML cold-start before a pod becomes Ready
+  # --- predictive control ---
+  LEAD_TIME: "60"         # forecast horizon ~= pod cold-start (s)
+  SAFETY_MARGIN: "0.30"   # head-room fraction
+  MIN_REPLICAS: "2"
+  MAX_REPLICAS: "20"
+  CONTROL_PERIOD: "10"    # controller loop period (s)
+  DAY_SECONDS: "600"      # compressed simulated day (s)
+  SAMPLE_DT: "2"
+  N_LAGS: "8"
+  # --- observability ---
+  PROMETHEUS_URL: "http://prometheus:9090"

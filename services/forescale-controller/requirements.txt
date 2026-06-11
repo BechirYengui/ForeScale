@@ -1,0 +1,6 @@
+kubernetes==31.0.0
+scikit-learn==1.6.0
+numpy==2.2.1
+joblib==1.4.2
+requests==2.32.3
+# forescale-core and the forecaster package are copied in at image build time.

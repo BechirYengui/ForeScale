@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forescale-controller
+  namespace: forescale
+  labels:
+    app: forescale-controller
+    app.kubernetes.io/part-of: forescale
+spec:
+  # Single controller instance (it is the only writer of the replica count).
+  replicas: 1
+  selector:
+    matchLabels:
+      app: forescale-controller
+  template:
+    metadata:
+      labels:
+        app: forescale-controller
+    spec:
+      serviceAccountName: forescale-controller
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: controller
+          image: forescale/controller:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: forescale-config
+          env:
+            - name: NAMESPACE
+              value: forescale
+            - name: TARGET_DEPLOYMENT
+              value: inference-api
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

@@ -1,0 +1,14 @@
+apiVersion: v2
+name: forescale
+description: Predictive, ML-driven autoscaler for Kubernetes (demo stack).
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - autoscaling
+  - kubernetes
+  - machine-learning
+  - forecasting
+home: https://github.com/your-org/forescale
+maintainers:
+  - name: ForeScale
