@@ -174,7 +174,7 @@ helm upgrade forescale ./helm/forescale -n forescale --set mode=reactive
 
 ```
 forescale/
-├── libs/forescale_core/      # SHARED: seeded traffic curve + replica math
+├── libs/forescale_core/      # SHARED: seeded traffic curve + replica math + max-hold
 ├── services/
 │   ├── inference-api/        # FastAPI target app (real CPU work, Prometheus)
 │   ├── load-generator/       # replays the seeded curve, logs latency

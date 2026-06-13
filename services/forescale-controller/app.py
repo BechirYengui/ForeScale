@@ -26,6 +26,7 @@ CAPACITY_RPS           Sustainable rps per pod (default 50).
 SAFETY_MARGIN          Head-room fraction (default 0.30).
 MIN_REPLICAS/MAX_REPLICAS  Replica clamps (default 2 / 20).
 CONTROL_PERIOD         Loop period, seconds (default 10).
+SCALEDOWN_STABILIZATION  Max-hold window before scaling down, seconds (default 60).
 DAY_SECONDS            Compressed day length for the demo clock (default 600).
 SAMPLE_DT              Cadence of the rate history fed to the forecaster (default 2).
 N_LAGS                 Autoregressive lags (default 8).
@@ -46,6 +47,7 @@ import requests
 from forecaster.hgb_forecaster import HGBForecaster
 from forecaster.interface import Forecaster
 from forescale_core.replica_math import desired_replicas
+from forescale_core.stabilization import MaxHold
 
 logging.basicConfig(
     level=logging.INFO,
@@ -169,7 +171,7 @@ def control_loop(cfg: Config, forecaster: Forecaster, scaler: Scaler) -> None:
     """Run the predictive control loop forever."""
     # Rolling history of observed rates at sample cadence.
     history: deque[float] = deque(maxlen=cfg.n_lags)
-    recent_targets: deque[tuple[float, int]] = deque()
+    max_hold = MaxHold(cfg.scaledown_stabilization)
     last_sample = 0.0
 
     log.info(
@@ -204,12 +206,9 @@ def control_loop(cfg: Config, forecaster: Forecaster, scaler: Scaler) -> None:
             max_replicas=cfg.max_replicas,
         )
 
-        # Max-hold: keep the recent peak target to avoid stripping pre-warmed pods.
-        recent_targets.append((loop_start, desired))
-        cutoff = loop_start - cfg.scaledown_stabilization
-        while recent_targets and recent_targets[0][0] < cutoff:
-            recent_targets.popleft()
-        target = max(d for _, d in recent_targets)
+        # Max-hold: keep the recent peak target to avoid stripping pre-warmed
+        # pods (same stabilization the offline simulator applies).
+        target = max_hold.update(loop_start, desired)
 
         try:
             current = scaler.current_replicas()

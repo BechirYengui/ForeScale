@@ -34,6 +34,7 @@ import numpy as np
 
 from forecaster.interface import Forecaster
 from forescale_core.replica_math import desired_replicas
+from forescale_core.stabilization import MaxHold
 from forescale_core.traffic import TrafficConfig, generate_traffic_curve
 
 
@@ -209,7 +210,7 @@ def simulate(
     last_sample = -1e9
     last_scaledown_block_until = 0.0
     next_window = cfg.window_s
-    recent_targets: list[tuple[float, int]] = []  # (time, desired) for max-hold
+    max_hold = MaxHold(cfg.predictive_scaledown_stabilization_s)
 
     base_ms = cfg.base_service_ms()
 
@@ -272,11 +273,9 @@ def simulate(
                 )
                 # Max-hold over the stabilization window: apply the peak desired
                 # count seen recently so a brief forecast dip does not strip
-                # pre-warmed capacity before an imminent burst.
-                recent_targets.append((now, desired))
-                cutoff = now - cfg.predictive_scaledown_stabilization_s
-                recent_targets = [(t, d) for t, d in recent_targets if t >= cutoff]
-                target = max(d for _, d in recent_targets)
+                # pre-warmed capacity before an imminent burst (shared with the
+                # live controller via forescale_core.MaxHold).
+                target = max_hold.update(now, desired)
                 fleet.set_target(target, now)
 
         # --- queue dynamics over this dt ---
